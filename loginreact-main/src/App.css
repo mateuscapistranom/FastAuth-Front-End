@@ -1,0 +1,190 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Helvetica', sans-serif;
+  color: #f0f0f0;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+@keyframes fadeInBackground {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.App {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: url("assets/bg.webp") no-repeat center center fixed;
+  background-size: cover;
+  animation: fadeInBackground 2s ease-in-out;
+}
+
+.main-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 15px;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
+  animation: slideIn 1s ease-out;
+  width: 100%;
+  max-width: 450px;
+}
+
+@keyframes slideIn {
+  0% { opacity: 0; transform: translateY(-30px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+a {
+  text-decoration: none;
+  color: #1abc9c;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #16a085;
+}
+
+h1 {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 20px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+button {
+  width: 100%;
+  padding: 15px;
+  background-color: #3498db;
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 40px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+button:hover {
+  background-color: #2980b9;
+  transform: scale(1.05);
+}
+
+button:focus {
+  outline: 2px solid #3498db;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 15px 30px;
+  margin: 10px 0;
+  border-radius: 25px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 8px rgba(52, 152, 219, 0.5);
+}
+
+input[type="text"]:focus-visible,
+input[type="password"]:focus-visible {
+  outline: 2px solid #3498db;
+}
+
+.icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #fff;
+}
+
+input[type="text"] ~ .icon,
+input[type="password"] ~ .icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-19%);
+  font-size: 20px;
+  color: #fff;
+}
+
+.text-small {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  margin-top: 10px;
+}
+
+.text-small a {
+  color: #1abc9c;
+}
+
+.text-small a:hover {
+  color: #16a085;
+  transition: color 0.3s ease;
+}
+
+@keyframes fadeInText {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  max-width: 450px;
+  animation: fadeInText 1s ease-out;
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+  .App {
+    padding: 20px;
+  }
+
+  .main-container {
+    max-width: 100%;
+    padding: 15px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  button {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    padding: 12px 25px;
+    font-size: 14px;
+  }
+
+  .text-small {
+    font-size: 12px;
+  }
+}
