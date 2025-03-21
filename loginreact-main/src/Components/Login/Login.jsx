@@ -3,15 +3,17 @@ import { FaUser, FaLock, FaEnvelope } from "react-icons/fa";
 import "./Login.css";
 
 const Login = () => {
+  // Estados de controle de autenticação e fluxo
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState(""); // Novo estado para o nome
+  const [name, setName] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
     if (message.text) {
@@ -22,15 +24,10 @@ const Login = () => {
     }
   }, [message.text]);
 
-  const validateEmail = (email) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email);
-  };
+  const validatePassword = (password) => password.length >= 6;
+  const validateEmail = (email) => /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(email);
 
-  const validatePassword = (password) => {
-    return password.length >= 6;
-  };
-
+  // Conexão com backend: Autenticação de usuário
   const authenticateUser = async (username, password) => {
     try {
       const response = await fetch("/api/authenticate", {
@@ -39,6 +36,7 @@ const Login = () => {
         body: JSON.stringify({ username, password }),
       });
       const data = await response.json();
+      if (data.isAuthenticated) setName(data.user?.name || "");
       return data.isAuthenticated;
     } catch (error) {
       console.error("Erro na autenticação", error);
@@ -46,74 +44,59 @@ const Login = () => {
     }
   };
 
-  const clearFields = () => {
-    setUsername("");
-    setPassword("");
-    setEmail("");
-    setName(""); // Limpa o campo de nome também
-  };
-
-  const handleRegister = async (event) => {
-    event.preventDefault();
-    if (!validateEmail(username)) {
-      setMessage({ text: "E-mail inválido.", type: "error" });
-      return;
-    }
-    if (!validatePassword(password)) {
-      setMessage({ text: "A senha precisa ter pelo menos 6 caracteres.", type: "error" });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password, name }), // Inclui o nome no registro
-      });
-      const data = await response.json();
-      if (data.success) {
-        setMessage({ text: "Registro realizado com sucesso!", type: "success" });
-        setIsRegistered(true);
-        clearFields(); // Limpa os campos após o registro bem-sucedido
-      } else {
-        setMessage({ text: data.error || "Erro ao registrar, tente novamente.", type: "error" });
-        clearFields(); // Limpa os campos em caso de erro
-      }
-    } catch (error) {
-      console.error("Erro no registro", error);
-      setMessage({ text: "Erro ao registrar, tente novamente.", type: "error" });
-      clearFields(); // Limpa os campos em caso de erro
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsLoading(true);
-    if (!validateEmail(username)) {
-      setMessage({ text: "E-mail inválido.", type: "error" });
-      setIsLoading(false);
-      clearFields(); // Limpa os campos em caso de e-mail inválido
-      return;
-    }
     const isValid = await authenticateUser(username, password);
+    
     if (isValid) {
       setMessage({ text: "Bem-vindo!", type: "success" });
       setIsAuthenticated(true);
     } else {
       setMessage({ text: "Credenciais inválidas. Tente novamente.", type: "error" });
-      clearFields(); // Limpa os campos em caso de credenciais inválidas
+      setUsername("");
+      setPassword("");
     }
     setIsLoading(false);
   };
 
+  // Conexão com backend: Registro de novo usuário
+  const handleRegister = async (event) => {
+    event.preventDefault();
+    if (!validateEmail(username)) return setMessage({ text: "E-mail inválido.", type: "error" });
+    if (!validatePassword(password)) return setMessage({ text: "A senha precisa ter pelo menos 6 caracteres.", type: "error" });
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password, name }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setMessage({ text: "Registro realizado com sucesso!", type: "success" });
+        setIsRegistered(false);
+        setUsername("");
+        setPassword("");
+        setName("");
+      } else {
+        setMessage({ text: data.error || "Erro ao registrar, tente novamente.", type: "error" });
+      }
+    } catch (error) {
+      console.error("Erro no registro", error);
+      setMessage({ text: "Erro ao registrar, tente novamente.", type: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Conexão com backend: Recuperação de senha
   const handlePasswordRecovery = async (event) => {
     event.preventDefault();
-    if (!validateEmail(email)) {
-      setMessage({ text: "E-mail inválido.", type: "error" });
-      return;
-    }
+    if (!validateEmail(email)) return setMessage({ text: "E-mail inválido.", type: "error" });
+
     setIsLoading(true);
     try {
       const response = await fetch("/api/recover-password", {
@@ -121,49 +104,87 @@ const Login = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+
       const data = await response.json();
       if (data.success) {
         setMessage({ text: "Um link de recuperação foi enviado.", type: "success" });
         setIsPasswordReset(true);
-        clearFields(); // Limpa os campos após o envio bem-sucedido
+        setEmail("");
       } else {
         setMessage({ text: "Erro ao enviar o link de recuperação.", type: "error" });
-        clearFields(); // Limpa os campos em caso de erro
       }
     } catch (error) {
       console.error("Erro na recuperação de senha", error);
       setMessage({ text: "Erro ao enviar o link de recuperação.", type: "error" });
-      clearFields(); // Limpa os campos em caso de erro
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Conexão com backend: Atualização de dados do usuário
+  const handleSaveUserData = async (event) => {
+    event.preventDefault();
+    if (password && !validatePassword(password)) return setMessage({ text: "A senha precisa ter pelo menos 6 caracteres.", type: "error" });
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/updateUser", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, ...(password && { newPassword: password }) }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setMessage({ text: "Dados atualizados com sucesso!", type: "success" });
+        setIsEditing(false);
+        setPassword("");
+      } else {
+        throw new Error(data.error || "Erro na atualização");
+      }
+    } catch (error) {
+      setMessage({ text: error.message, type: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUsername("");
+    setPassword("");
+    setName("");
+    setIsEditing(false);
+    setMessage({ text: "Você foi deslogado.", type: "success" });
+  };
+
+  const handleEditUserData = () => {
+    isAuthenticated 
+      ? setIsEditing(!isEditing) 
+      : setMessage({ text: "Faça login para editar os dados.", type: "error" });
   };
 
   return (
     <div className="container">
       {message.text && (
         <div className={`message ${message.type}`}>
-          {message.type === "success" ? (
-            <span className="success-icon">✔</span>
-          ) : (
-            <span className="error-icon">❌</span>
-          )}
+          {message.type === "success" ? "✔" : "❌"}
           {message.text}
         </div>
       )}
 
       {!isAuthenticated && !isPasswordReset && !isRegistered && (
-        <form onSubmit={handleSubmit}>
-          <h1>Inicie sua sessão</h1>
+        <form onSubmit={handleSubmit} className="login-form">
+          <h1>FastAuth: Autenticação Rápida</h1>
           <div className="input-field">
             <input
-              type="text"
+              type="email"
               placeholder="E-mail"
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
-            <FaUser className="icon" />
+            <FaEnvelope className="icon" />
           </div>
           <div className="input-field">
             <input
@@ -180,53 +201,46 @@ const Login = () => {
               <input type="checkbox" />
               Lembre de mim
             </label>
-            <a href="#" onClick={() => setIsPasswordReset(true)}>
+            <p className="text-btn" onClick={() => setIsPasswordReset(true)}>
               Esqueceu sua senha?
-            </a>
+            </p>
           </div>
-          <button type="submit" disabled={isLoading}>
+          <button type="submit" disabled={isLoading} className="primary-btn">
             {isLoading ? "Carregando..." : "Login"}
           </button>
           <div className="signup-link">
             <p>
               Não tem uma conta?{" "}
-              <a href="#" onClick={() => setIsRegistered(true)}>
-                Registrar
-              </a>
+              <button type="button" className="text-btn" onClick={() => setIsRegistered(true)}>
+                Registrar-se
+              </button>
             </p>
           </div>
         </form>
       )}
 
-      {isAuthenticated && (
-        <div className="welcome-message">
-          <h1>Bem-vindo, {username}!</h1>
-          <p>Você foi autenticado com sucesso.</p>
-        </div>
-      )}
-
       {isRegistered && (
-        <form onSubmit={handleRegister}>
-          <h1>Registre-se</h1>
+        <form onSubmit={handleRegister} className="registration-form">
+          <h1>Criar Nova Conta</h1>
           <div className="input-field">
             <input
               type="text"
-              placeholder="Nome"
+              placeholder="Nome completo"
               required
               value={name}
-              onChange={(e) => setName(e.target.value)} // Campo de nome
+              onChange={(e) => setName(e.target.value)}
             />
             <FaUser className="icon" />
           </div>
           <div className="input-field">
             <input
-              type="text"
+              type="email"
               placeholder="E-mail"
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
-            <FaUser className="icon" />
+            <FaEnvelope className="icon" />
           </div>
           <div className="input-field">
             <input
@@ -238,45 +252,83 @@ const Login = () => {
             />
             <FaLock className="icon" />
           </div>
-          <button type="submit" disabled={isLoading}>
+          <button type="submit" disabled={isLoading} className="primary-btn">
             {isLoading ? "Carregando..." : "Registrar"}
           </button>
-          <div className="signup-link">
+          <div className="signin-link">
             <p>
               Já tem uma conta?{" "}
-              <a href="#" onClick={() => setIsRegistered(false)}>
-                Fazer login
-              </a>
+              <button type="button" className="text-btn" onClick={() => setIsRegistered(false)}>
+                Entrar
+              </button>
             </p>
           </div>
         </form>
       )}
 
       {isPasswordReset && (
-        <form onSubmit={handlePasswordRecovery}>
-          <h1>Recuperar Senha</h1>
+        <form onSubmit={handlePasswordRecovery} className="password-recovery-form">
+          <h1>Recuperação de Senha</h1>
           <div className="input-field">
             <input
               type="email"
-              placeholder="E-mail"
+              placeholder="Digite seu e-mail"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
             <FaEnvelope className="icon" />
           </div>
-          <button type="submit" disabled={isLoading}>
-            {isLoading ? "Carregando..." : "Recuperar"}
+          <button type="submit" disabled={isLoading} className="primary-btn">
+            {isLoading ? "Carregando..." : "Recuperar Senha"}
           </button>
-          <div className="signup-link">
+          <div className="signin-link">
             <p>
-              Já lembrou sua senha?{" "}
-              <a href="#" onClick={() => setIsPasswordReset(false)}>
-                Voltar para login
-              </a>
+              Já tem uma conta?{" "}
+              <button type="button" className="text-btn" onClick={() => setIsPasswordReset(false)}>
+                Entrar
+              </button>
             </p>
           </div>
         </form>
+      )}
+
+      {isAuthenticated && (
+        <div className="user-dashboard">
+          <h1>Bem-vindo, {name}!</h1>
+          <button onClick={handleLogout} className="primary-btn">
+            Sair
+          </button>
+          <button onClick={handleEditUserData} className="secondary-btn">
+            {isEditing ? "Cancelar" : "Editar Dados"}
+          </button>
+          
+          {isEditing && (
+            <form onSubmit={handleSaveUserData} className="edit-user-form">
+              <div className="input-field">
+                <input
+                  type="text"
+                  placeholder="Nome"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <FaUser className="icon" />
+              </div>
+              <div className="input-field">
+                <input
+                  type="password"
+                  placeholder="Nova senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <FaLock className="icon" />
+              </div>
+              <button type="submit" disabled={isLoading} className="primary-btn">
+                {isLoading ? "Salvando..." : "Salvar"}
+              </button>
+            </form>
+          )}
+        </div>
       )}
     </div>
   );

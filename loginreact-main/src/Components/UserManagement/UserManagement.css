@@ -1,0 +1,118 @@
+.container {
+  width: 450px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeIn 1s ease-out;
+  box-sizing: border-box;
+}
+
+.container h1 {
+  text-align: center;
+  font-size: 30px;
+  color: #fff;
+  margin-bottom: 30px;
+}
+
+.input-field {
+  position: relative;
+  width: 100%;
+  height: 50px;
+  margin: 20px 0;
+  animation: slideIn 1s ease-out;
+}
+
+.input-field input {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  outline: none;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 40px;
+  font-size: 16px;
+  color: #fff;
+  padding: 20px 45px 20px 25px;
+  transition: 0.3s ease;
+}
+
+.input-field input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}
+
+.input-field .icon {
+  position: absolute;
+  right: 15px;
+  top: 60%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #fff;
+  z-index: 1;
+}
+
+.user-list {
+  width: 100%;
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.user-list h2 {
+  font-size: 20px;
+  color: #fff;
+  margin-bottom: 20px;
+  text-align: center;
+  width: 100%;
+}
+
+.user-list ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.user-list ul li {
+  padding: 10px;
+  background-color: rgb(255, 255, 255);
+  border-radius: 5px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-list ul li button {
+  background-color: #3498db;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.user-list ul li button:hover {
+  background-color: #2980b9;
+}
+
+form {
+  margin-top: 50px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+form h1 {
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+form .input-field {
+  margin: 20px 0;
+}
