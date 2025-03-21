@@ -4,7 +4,6 @@ import "./Login.css";
 
 const Login = () => {
   // Estados de controle de autenticação e fluxo
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -14,6 +13,12 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [email, setEmail] = useState("");
+
+  const API_URL = "http://localhost:5000";
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
 
   useEffect(() => {
     if (message.text) {
@@ -25,36 +30,88 @@ const Login = () => {
   }, [message.text]);
 
   const validatePassword = (password) => password.length >= 6;
-  const validateEmail = (email) => /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(email);
+  const validateEmail = (email) =>
+    /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/.test(email);
 
   // Conexão com backend: Autenticação de usuário
-  const authenticateUser = async (username, password) => {
+  const authenticateUser = async (email, password) => {
     try {
-      const response = await fetch("/api/authenticate", {
+      const response = await fetch(`${API_URL}/auth/token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
-      if (data.isAuthenticated) setName(data.user?.name || "");
-      return data.isAuthenticated;
+      if (data.token) {
+        localStorage.setItem("authToken", data.token); // Armazena o token
+        fetchUserData();
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error("Erro na autenticação", error);
       return false;
     }
   };
 
+  const fetchUserData = async () => {
+    const token = localStorage.getItem("authToken");
+
+    if (!token) {
+      console.error("Token não encontrado.");
+      setIsAuthenticated(false); // Desautentica o usuário se não houver token
+      return null;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/users`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`, // Enviando o token na requisição
+        },
+      });
+
+      if (response.status === 401) {
+        // Token expirado ou inválido
+        console.error("Token expirado ou inválido.");
+        localStorage.removeItem("authToken"); // Remove o token inválido
+        setIsAuthenticated(false); // Desautentica o usuário
+        return null;
+      }
+
+      if (!response.ok) {
+        console.error("Erro ao buscar dados do usuário.");
+        setIsAuthenticated(false); // Desautentica o usuário em caso de erro
+        return null;
+      }
+
+      const data = await response.json();
+      console.log(data); // Use os dados do usuário conforme necessário
+      if (data.name) {
+        setName(data.name); // Armazena o nome do usuário no estado
+        setIsAuthenticated(true); // Define como autenticado
+      }
+      return data;
+    } catch (error) {
+      console.error("Erro ao buscar dados do usuário:", error);
+      setIsAuthenticated(false); // Desautentica o usuário em caso de erro
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsLoading(true);
-    const isValid = await authenticateUser(username, password);
-    
+    const isValid = await authenticateUser(email, password);
+
     if (isValid) {
       setMessage({ text: "Bem-vindo!", type: "success" });
       setIsAuthenticated(true);
     } else {
-      setMessage({ text: "Credenciais inválidas. Tente novamente.", type: "error" });
-      setUsername("");
+      setMessage({
+        text: "Credenciais inválidas. Tente novamente.",
+        type: "error",
+      });
+      setEmail("");
       setPassword("");
     }
     setIsLoading(false);
@@ -63,30 +120,44 @@ const Login = () => {
   // Conexão com backend: Registro de novo usuário
   const handleRegister = async (event) => {
     event.preventDefault();
-    if (!validateEmail(username)) return setMessage({ text: "E-mail inválido.", type: "error" });
-    if (!validatePassword(password)) return setMessage({ text: "A senha precisa ter pelo menos 6 caracteres.", type: "error" });
+    if (!validateEmail(email))
+      return setMessage({ text: "E-mail inválido.", type: "error" });
+    if (!validatePassword(password))
+      return setMessage({
+        text: "A senha precisa ter pelo menos 6 caracteres.",
+        type: "error",
+      });
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/register", {
+      const response = await fetch(`${API_URL}/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password, name }),
+        body: JSON.stringify({ name, email, password }),
       });
-      
+
       const data = await response.json();
-      if (data.success) {
-        setMessage({ text: "Registro realizado com sucesso!", type: "success" });
+      if (response.status === 201) {
+        setMessage({
+          text: "Registro realizado com sucesso!",
+          type: "success",
+        });
         setIsRegistered(false);
-        setUsername("");
+        setEmail("");
         setPassword("");
         setName("");
       } else {
-        setMessage({ text: data.error || "Erro ao registrar, tente novamente.", type: "error" });
+        setMessage({
+          text: data.error || "Erro ao registrar, tente novamente.",
+          type: "error",
+        });
       }
     } catch (error) {
       console.error("Erro no registro", error);
-      setMessage({ text: "Erro ao registrar, tente novamente.", type: "error" });
+      setMessage({
+        text: "Erro ao registrar, tente novamente.",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +166,8 @@ const Login = () => {
   // Conexão com backend: Recuperação de senha
   const handlePasswordRecovery = async (event) => {
     event.preventDefault();
-    if (!validateEmail(email)) return setMessage({ text: "E-mail inválido.", type: "error" });
+    if (!validateEmail(email))
+      return setMessage({ text: "E-mail inválido.", type: "error" });
 
     setIsLoading(true);
     try {
@@ -107,15 +179,24 @@ const Login = () => {
 
       const data = await response.json();
       if (data.success) {
-        setMessage({ text: "Um link de recuperação foi enviado.", type: "success" });
+        setMessage({
+          text: "Um link de recuperação foi enviado.",
+          type: "success",
+        });
         setIsPasswordReset(true);
         setEmail("");
       } else {
-        setMessage({ text: "Erro ao enviar o link de recuperação.", type: "error" });
+        setMessage({
+          text: "Erro ao enviar o link de recuperação.",
+          type: "error",
+        });
       }
     } catch (error) {
       console.error("Erro na recuperação de senha", error);
-      setMessage({ text: "Erro ao enviar o link de recuperação.", type: "error" });
+      setMessage({
+        text: "Erro ao enviar o link de recuperação.",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -124,14 +205,21 @@ const Login = () => {
   // Conexão com backend: Atualização de dados do usuário
   const handleSaveUserData = async (event) => {
     event.preventDefault();
-    if (password && !validatePassword(password)) return setMessage({ text: "A senha precisa ter pelo menos 6 caracteres.", type: "error" });
+    if (password && !validatePassword(password))
+      return setMessage({
+        text: "A senha precisa ter pelo menos 6 caracteres.",
+        type: "error",
+      });
 
     setIsLoading(true);
     try {
       const response = await fetch("/api/updateUser", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, ...(password && { newPassword: password }) }),
+        body: JSON.stringify({
+          name,
+          ...(password && { newPassword: password }),
+        }),
       });
 
       const data = await response.json();
@@ -151,7 +239,8 @@ const Login = () => {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    setUsername("");
+    localStorage.removeItem("authToken");
+    setEmail("");
     setPassword("");
     setName("");
     setIsEditing(false);
@@ -159,8 +248,8 @@ const Login = () => {
   };
 
   const handleEditUserData = () => {
-    isAuthenticated 
-      ? setIsEditing(!isEditing) 
+    isAuthenticated
+      ? setIsEditing(!isEditing)
       : setMessage({ text: "Faça login para editar os dados.", type: "error" });
   };
 
@@ -181,8 +270,8 @@ const Login = () => {
               type="email"
               placeholder="E-mail"
               required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
             <FaEnvelope className="icon" />
           </div>
@@ -211,7 +300,11 @@ const Login = () => {
           <div className="signup-link">
             <p>
               Não tem uma conta?{" "}
-              <button type="button" className="text-btn" onClick={() => setIsRegistered(true)}>
+              <button
+                type="button"
+                className="text-btn"
+                onClick={() => setIsRegistered(true)}
+              >
                 Registrar-se
               </button>
             </p>
@@ -237,8 +330,8 @@ const Login = () => {
               type="email"
               placeholder="E-mail"
               required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
             <FaEnvelope className="icon" />
           </div>
@@ -258,7 +351,11 @@ const Login = () => {
           <div className="signin-link">
             <p>
               Já tem uma conta?{" "}
-              <button type="button" className="text-btn" onClick={() => setIsRegistered(false)}>
+              <button
+                type="button"
+                className="text-btn"
+                onClick={() => setIsRegistered(false)}
+              >
                 Entrar
               </button>
             </p>
@@ -267,7 +364,10 @@ const Login = () => {
       )}
 
       {isPasswordReset && (
-        <form onSubmit={handlePasswordRecovery} className="password-recovery-form">
+        <form
+          onSubmit={handlePasswordRecovery}
+          className="password-recovery-form"
+        >
           <h1>Recuperação de Senha</h1>
           <div className="input-field">
             <input
@@ -285,7 +385,11 @@ const Login = () => {
           <div className="signin-link">
             <p>
               Já tem uma conta?{" "}
-              <button type="button" className="text-btn" onClick={() => setIsPasswordReset(false)}>
+              <button
+                type="button"
+                className="text-btn"
+                onClick={() => setIsPasswordReset(false)}
+              >
                 Entrar
               </button>
             </p>
@@ -302,7 +406,7 @@ const Login = () => {
           <button onClick={handleEditUserData} className="secondary-btn">
             {isEditing ? "Cancelar" : "Editar Dados"}
           </button>
-          
+
           {isEditing && (
             <form onSubmit={handleSaveUserData} className="edit-user-form">
               <div className="input-field">
@@ -323,7 +427,11 @@ const Login = () => {
                 />
                 <FaLock className="icon" />
               </div>
-              <button type="submit" disabled={isLoading} className="primary-btn">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="primary-btn"
+              >
                 {isLoading ? "Salvando..." : "Salvar"}
               </button>
             </form>
