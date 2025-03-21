@@ -45,6 +45,7 @@ const Login = () => {
       if (data.token) {
         localStorage.setItem("authToken", data.token); // Armazena o token
         fetchUserData();
+        setPassword("");
         return true;
       }
       return false;
@@ -64,7 +65,7 @@ const Login = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/users`, {
+      const response = await fetch(`${API_URL}/user`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`, // Enviando o token na requisição
@@ -89,6 +90,7 @@ const Login = () => {
       console.log(data); // Use os dados do usuário conforme necessário
       if (data.name) {
         setName(data.name); // Armazena o nome do usuário no estado
+        setEmail(data.email); // Armazena o email do usuário no estado
         setIsAuthenticated(true); // Define como autenticado
       }
       return data;
@@ -213,20 +215,26 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/updateUser", {
+      const response = await fetch(`${API_URL}/users`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
         body: JSON.stringify({
           name,
-          ...(password && { newPassword: password }),
+          email,
+          password,
         }),
       });
 
       const data = await response.json();
-      if (data.success) {
+      if (response.status === 200) {
+        console.log(data);
         setMessage({ text: "Dados atualizados com sucesso!", type: "success" });
         setIsEditing(false);
         setPassword("");
+        localStorage.setItem("authToken", data.token);
       } else {
         throw new Error(data.error || "Erro na atualização");
       }
@@ -251,6 +259,33 @@ const Login = () => {
     isAuthenticated
       ? setIsEditing(!isEditing)
       : setMessage({ text: "Faça login para editar os dados.", type: "error" });
+  };
+
+  const handleDeleteAccount = async () => {
+    if (window.confirm("Tem certeza que deseja deletar sua conta?")) {
+      try {
+        const response = await fetch(`${API_URL}/users`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        });
+
+        if (response.status === 200) {
+          setIsAuthenticated(false);
+          localStorage.removeItem("authToken");
+          setEmail("");
+          setPassword("");
+          setName("");
+          setIsEditing(false);
+          setMessage({ text: "Conta deletada com sucesso.", type: "success" });
+        } else {
+          throw new Error("Erro ao deletar conta.");
+        }
+      } catch (error) {
+        setMessage({ text: error.message, type: "error" });
+      }
+    }
   };
 
   return (
@@ -406,6 +441,9 @@ const Login = () => {
           <button onClick={handleEditUserData} className="secondary-btn">
             {isEditing ? "Cancelar" : "Editar Dados"}
           </button>
+          <button onClick={handleDeleteAccount} className="danger-btn">
+            Deletar Conta
+          </button>
 
           {isEditing && (
             <form onSubmit={handleSaveUserData} className="edit-user-form">
@@ -420,6 +458,15 @@ const Login = () => {
               </div>
               <div className="input-field">
                 <input
+                  type="text"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <FaEnvelope className="icon" />
+              </div>
+              <div className="input-field">
+                <input
                   type="password"
                   placeholder="Nova senha"
                   value={password}
@@ -431,6 +478,7 @@ const Login = () => {
                 type="submit"
                 disabled={isLoading}
                 className="primary-btn"
+                onClick={handleSaveUserData}
               >
                 {isLoading ? "Salvando..." : "Salvar"}
               </button>
